@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proof</title>
+  <style>
+    :root { --bg:#07120e; --card:#0e1c16; --line:#1d3b2e; --text:#e8f6ee; --mint:#7dffb3; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 28px 20px 80px; }
+    .brand { letter-spacing: .22em; text-transform: uppercase; font-size: 12px; color: var(--mint); cursor: pointer; }
+    h1 { font-size: clamp(34px, 7vw, 64px); letter-spacing: -1px; margin: 22px 0 12px; }
+    .btn { display: inline-block; background: var(--mint); color: #062; font-weight: 700; padding: 12px 18px; border-radius: 12px; border: 0; cursor: pointer; margin: 8px 8px 0 0; }
+    .ghost { background: transparent; color: var(--mint); border: 1px solid var(--line); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 12px 0; }
+    .hidden { display: none; }
+    img.preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand" onclick="show('home')">Proof</div>
+
+    <section id="home">
+      <h1>Know it happened.</h1>
+      <p>Checklists with photos. Managers stop guessing.</p>
+      <button class="btn" onclick="show('staff')">Staff checklist</button>
+      <button class="btn ghost" onclick="show('mgr')">Manager</button>
+    </section>
+
+    <section id="staff" class="hidden">
+      <h1 style="font-size:36px">Today · opening</h1>
+      <div id="items"></div>
+      <button class="btn" onclick="submit()">Submit proof</button>
+    </section>
+
+    <section id="mgr" class="hidden">
+      <h1 style="font-size:36px">Submissions</h1>
+      <div id="subs"></div>
+      <button class="btn" onclick="show('staff')">Staff checklist</button>
+    </section>
+  </main>
+  <script>
+    const KEY="proof.subs";
+    const TEMPLATE=["Lights and open sign on","Floors clear and dry","Restroom stocked","Safe counted","Door locked / cameras checked"];
+    let items = TEMPLATE.map(text => ({text, done:false, photo:""}));
+    const $ = id => document.getElementById(id);
+    function list(){ try{return JSON.parse(localStorage.getItem(KEY)||"[]");}catch{return[];} }
+    function show(name){
+      ["home","staff","mgr"].forEach(id => $(id).classList.toggle("hidden", id!==name));
+      if(name==="staff") renderStaff();
+      if(name==="mgr") renderMgr();
+    }
+    function renderStaff(){
+      $("items").innerHTML = items.map((it,i)=>`<div class="card"><label><input type="checkbox" ${it.done?"checked":""} onchange="items[${i}].done=this.checked"> ${it.text}</label><br><input type="file" accept="image/*" onchange="photo(${i}, this.files[0])">${it.photo?`<img class="preview" src="${it.photo}">`:""}</div>`).join("");
+    }
+    function photo(i, file){
+      if(!file) return;
+      const r=new FileReader();
+      r.onload=()=>{ items[i].photo=r.result; items[i].done=true; renderStaff(); };
+      r.readAsDataURL(file);
+    }
+    function submit(){
+      const all=list();
+      all.unshift({at:new Date().toISOString(), items:JSON.parse(JSON.stringify(items))});
+      localStorage.setItem(KEY, JSON.stringify(all));
+      items = TEMPLATE.map(text => ({text, done:false, photo:""}));
+      show("mgr");
+    }
+    function renderMgr(){
+      const rows=list();
+      $("subs").innerHTML = rows.length ? rows.map(s=>`<div class="card"><strong>${new Date(s.at).toLocaleString()}</strong><div>${s.items.filter(i=>i.done).length}/${s.items.length} complete</div>${s.items.map(i=>`<div>${i.done?"✓":"○"} ${i.text}${i.photo?`<img class="preview" src="${i.photo}">`:""}</div>`).join("")}</div>`).join("") : "<p>No checklists yet.</p>";
+    }
+  </script>
+</body>
+</html>
